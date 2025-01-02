@@ -1,0 +1,123 @@
+.TH ITERATOR 3 "January 2024" "Version 1.0" "Zig Library Functions"
+.SH NAME
+iterator \- sequence iteration and transformation library for Zig
+.SH SYNOPSIS
+.nf
+.B const Iterator = @import("iterator.zig").Iterator;
+.PP
+.B var iter = Iterator(T).init(items);
+.PP
+.B while (iter.next()) |item| { ... }
+.fi
+.SH DESCRIPTION
+.B Iterator
+provides a flexible and efficient way to process sequences of data in Zig. It supports lazy evaluation, transformation operations, filtering, reduction, and combination of sequences.
+.SH CORE OPERATIONS
+.TP
+.BI "init(items: []const T) Self"
+Creates a new iterator from a slice of items.
+.TP
+.BI "next(self: *Self) ?T"
+Returns the next item in the sequence and advances the iterator. Returns null when exhausted.
+.TP
+.BI "peek(self: Self) ?T"
+Returns the next item without advancing the iterator. Returns null when exhausted.
+.TP
+.BI "count(self: Self) usize"
+Returns the number of items remaining in the iterator.
+.SH TRANSFORMATION OPERATIONS
+.TP
+.BI "map(self: *Self, allocator: Allocator, comptime Ret: type, comptime func: fn (T) Ret) !ArrayList(Ret)"
+Transforms each element using the provided function.
+.TP
+.BI "mapTry(self: *Self, allocator: Allocator, comptime Ret: type, comptime E: type, comptime func: fn (T) E!Ret) !ArrayList(Ret)"
+Maps elements with a function that can fail.
+.TP
+.BI "filter(self: *Self, allocator: Allocator, comptime pred: fn (T) bool) !ArrayList(T)"
+Keeps only elements that satisfy the predicate.
+.SH COLLECTION OPERATIONS
+.TP
+.BI "take(self: *Self, allocator: Allocator, n: usize) !ArrayList(T)"
+Takes up to n elements from the iterator.
+.TP
+.BI "skip(self: *Self, n: usize) void"
+Advances the iterator by n positions.
+.TP
+.BI "collect(self: *Self, allocator: Allocator) !ArrayList(T)"
+Collects all remaining elements into an ArrayList.
+.SH COMBINING OPERATIONS
+.TP
+.BI "chain(self: *Self, allocator: Allocator, other: *Self) !ArrayList(T)"
+Concatenates two iterators.
+.TP
+.BI "zip(self: *Self, comptime U: type, allocator: Allocator, other: *Iterator(U)) !ArrayList(ZipResult(U))"
+Combines elements from two iterators pairwise.
+.SH PREDICATES AND SEARCH
+.TP
+.BI "find(self: *Self, comptime pred: fn (T) bool) ?T"
+Returns the first element that satisfies the predicate.
+.TP
+.BI "any(self: *Self, comptime pred: fn (T) bool) bool"
+Returns true if any element satisfies the predicate.
+.TP
+.BI "all(self: *Self, comptime pred: fn (T) bool) bool"
+Returns true if all elements satisfy the predicate.
+.TP
+.BI "none(self: *Self, comptime pred: fn (T) bool) bool"
+Returns true if no elements satisfy the predicate.
+.SH REDUCTION
+.TP
+.BI "reduce(self: *Self, comptime Acc: type, initial: Acc, comptime func: fn (Acc, T) Acc) Acc"
+Combines all elements into a single value using the provided function.
+.SH MEMORY MANAGEMENT
+Methods that return an ArrayList transfer ownership to the caller. The caller must call deinit() on these ArrayLists when they're no longer needed.
+.SH ERROR HANDLING
+Methods that can fail return error unions and should be called with try.
+.SH THREAD SAFETY
+The Iterator type is not thread-safe. Each iterator should be used by a single thread.
+.SH EXAMPLES
+.PP
+Basic iteration:
+.PP
+.nf
+    var numbers = [_]i32{ 1, 2, 3, 4, 5 };
+    var iter = Iterator(i32).init(&numbers);
+    while (iter.next()) |num| {
+        std.debug.print("{d}\\n", .{num});
+    }
+.fi
+.PP
+Transformation:
+.PP
+.nf
+    const double = struct {
+        fn func(x: i32) i32 {
+            return x * 2;
+        }
+    }.func;
+
+    var doubled = try iter.map(allocator, i32, double);
+    defer doubled.deinit();
+.fi
+.PP
+Filtering:
+.PP
+.nf
+    const isEven = struct {
+        fn func(x: i32) bool {
+            return @mod(x, 2) == 0;
+        }
+    }.func;
+
+    var evens = try iter.filter(allocator, isEven);
+    defer evens.deinit();
+.fi
+.SH SEE ALSO
+.BR std.ArrayList (3),
+.BR std.mem.Allocator (3)
+.SH BUGS
+Report bugs to your project's issue tracker.
+.SH AUTHOR
+Your Name <hunter.jay.k@gmail.com>
+.SH COPYRIGHT
+Copyright \(co 2024 Jay Hunter. License MIT.
